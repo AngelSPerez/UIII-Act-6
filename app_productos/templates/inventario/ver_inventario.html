@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+  <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por producto, tipo o responsable...">
+</div>
+
+<h3>Ver Inventario</h3>
+<table class="table table-striped" id="dataTable">
+  <thead>
+    <tr>
+      <th>ID Mov.</th>
+      <th>Fecha</th>
+      <th>Producto</th>
+      <th>Tipo</th>
+      <th>Cantidad</th>
+      <th>Razón</th>
+      <th>Responsable</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for mov in movimientos %}
+    <tr>
+      <td>{{ mov.id }}</td>
+      <td>{{ mov.fecha_movimiento|date:"Y-m-d H:i" }}</td>
+      <td>{{ mov.producto.nombre }}</td>
+      <td>{{ mov.get_tipo_movimiento_display }}</td>
+      <td>{{ mov.cantidad }}</td>
+      <td>{{ mov.razon|truncatechars:50 }}</td>
+      <td>{{ mov.responsable|default:"-" }}</td>
+      <td>
+        <a class="btn btn-sm btn-secondary" href="{% url 'actualizar_movimiento' mov.id %}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="{% url 'borrar_movimiento' mov.id %}">Borrar</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">No hay movimientos de inventario registrados.</td></tr> 
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('dataTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent.toLowerCase();
+        
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

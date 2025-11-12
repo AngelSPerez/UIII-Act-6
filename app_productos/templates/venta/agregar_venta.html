@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Registrar Nueva Venta Completa</h3>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="row">
+        <div class="col-md-4">
+            <h4>1. Información General</h4>
+            <div class="mb-3">
+                <label class="form-label">Fecha de Venta</label>
+                <input type="text" name="fecha_venta_display" class="form-control" value="{% now "Y-m-d H:i" %}" readonly>
+                <div class="form-text">La fecha se registrará al momento de guardar.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Nombre del Cliente (*)</label>
+                <input name="nombre_cliente" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Vendedor (Opcional)</label>
+                <input name="vendedor" class="form-control">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Método de Pago (*)</label>
+                <select name="metodo_pago" class="form-control" required>
+                    <option value="">Seleccione...</option>
+                    {% for code, label in metodos_pago %}
+                        <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="esta_pagada" name="esta_pagada" checked>
+                <label class="form-check-label" for="esta_pagada">Venta Pagada</label>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h4>2. Detalles de Venta</h4>
+            
+            <table class="table table-striped table-bordered" id="detalle-venta-table">
+                <thead>
+                    <tr>
+                        <th>Producto (*)</th>
+                        <th>Cantidad (*)</th>
+                        <th>Precio Unitario</th>
+                        <th>Desc. (%)</th>
+                        <th>Subtotal</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody id="formset-container">
+                    {{ formset.management_form }}
+                    
+                    {% for form in formset %}
+                        <tr class="formset-row" data-form-index="{{ forloop.counter0 }}">
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            
+                            <td>
+                                {{ form.producto }}
+                                {% if form.producto.errors %}
+                                    <small class="text-danger">{{ form.producto.errors.0 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.cantidad_vendida }}
+                                {% if form.cantidad_vendida.errors %}
+                                    <small class="text-danger">{{ form.cantidad_vendida.errors.0 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.precio_unitario }}
+                                {% if form.precio_unitario.errors %}
+                                    <small class="text-danger">{{ form.precio_unitario.errors.0 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ form.descuento_porcentaje }}
+                                {% if form.descuento_porcentaje.errors %}
+                                    <small class="text-danger">{{ form.descuento_porcentaje.errors.0 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="text" class="form-control subtotal-display" value="0.00" readonly>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">X</button>
+                                {{ form.DELETE }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <button type="button" class="btn btn-sm btn-info" id="add-form-row">Añadir Producto</button>
+            
+            {% if formset.non_form_errors %}
+                <p class="mt-2 text-danger">
+                    {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">Guardar Venta</button>
+    <a href="{% url 'ver_ventas' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<script>
+// Datos de productos desde Django
+const PRODUCTOS_DATA = {{ productos_json|safe }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Script iniciado');
+    console.log('📦 Productos cargados:', PRODUCTOS_DATA.length);
+    
+    const tableBody = document.getElementById('formset-container');
+    const addButton = document.getElementById('add-form-row');
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    
+    if (!tableBody || !addButton || !totalFormsInput) {
+        console.error('❌ Faltan elementos básicos');
+        return;
+    }
+    
+    let totalForms = parseInt(totalFormsInput.value);
+    console.log('📊 Total forms inicial:', totalForms);
+    
+    // ============================================
+    // FUNCIÓN: Obtener precio de producto
+    // ============================================
+    function getProductPrice(productId) {
+        if (!productId) return '0.00';
+        const product = PRODUCTOS_DATA.find(p => String(p.id) === String(productId));
+        return product ? product.precio_venta : '0.00';
+    }
+    
+    // ============================================
+    // FUNCIÓN: Calcular subtotal
+    // ============================================
+    function calcularSubtotal(row) {
+        const cantidadInput = row.querySelector('input[name$="-cantidad_vendida"]');
+        const precioInput = row.querySelector('input[name$="-precio_unitario"]');
+        const descuentoInput = row.querySelector('input[name$="-descuento_porcentaje"]');
+        const subtotalDisplay = row.querySelector('.subtotal-display');
+        
+        if (!cantidadInput || !precioInput || !descuentoInput || !subtotalDisplay) return;
+        
+        const cantidad = parseFloat(cantidadInput.value) || 0;
+        const precio = parseFloat(precioInput.value) || 0;
+        const descuento = parseFloat(descuentoInput.value) || 0;
+        
+        const base = cantidad * precio;
+        const subtotal = base * (1 - descuento / 100);
+        
+        subtotalDisplay.value = subtotal.toFixed(2);
+    }
+    
+    // ============================================
+    // FUNCIÓN: Actualizar precio cuando cambia producto
+    // ============================================
+    function onProductoChange(event) {
+        const select = event.target;
+        const productoId = select.value;
+        const row = select.closest('.formset-row');
+        const precioInput = row.querySelector('input[name$="-precio_unitario"]');
+        
+        if (!precioInput) {
+            console.warn('⚠️ No se encontró el input de precio');
+            return;
+        }
+        
+        const precio = getProductPrice(productoId);
+        precioInput.value = precio;
+        console.log(`💰 Precio actualizado: ${precio} para producto ${productoId}`);
+        
+        calcularSubtotal(row);
+    }
+    
+    // ============================================
+    // FUNCIÓN: Adjuntar eventos a una fila
+    // ============================================
+    function adjuntarEventos(row) {
+        // Select de producto
+        const productoSelect = row.querySelector('select[name$="-producto"]');
+        if (productoSelect) {
+            productoSelect.removeEventListener('change', onProductoChange);
+            productoSelect.addEventListener('change', onProductoChange);
+            console.log('🔗 Evento change adjuntado a select de producto');
+        }
+        
+        // Cantidad y descuento para calcular subtotal
+        const cantidadInput = row.querySelector('input[name$="-cantidad_vendida"]');
+        const descuentoInput = row.querySelector('input[name$="-descuento_porcentaje"]');
+        
+        if (cantidadInput) {
+            cantidadInput.addEventListener('input', () => calcularSubtotal(row));
+        }
+        if (descuentoInput) {
+            descuentoInput.addEventListener('input', () => calcularSubtotal(row));
+        }
+        
+        // Botón eliminar
+        const removeBtn = row.querySelector('.remove-form-row');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const deleteInput = row.querySelector('input[name$="-DELETE"]');
+                if (deleteInput) {
+                    deleteInput.checked = true;
+                    row.style.display = 'none';
+                    console.log('🗑️ Fila marcada para eliminar');
+                }
+            });
+        }
+    }
+    
+    // ============================================
+    // Adjuntar eventos a filas existentes
+    // ============================================
+    tableBody.querySelectorAll('.formset-row').forEach(row => {
+        adjuntarEventos(row);
+    });
+    
+    // ============================================
+    // BOTÓN: Añadir nueva fila
+    // ============================================
+    addButton.addEventListener('click', function() {
+        console.log('➕ Añadiendo nueva fila...');
+        
+        // Obtener la primera fila como plantilla
+        const primeraFila = tableBody.querySelector('.formset-row');
+        if (!primeraFila) {
+            console.error('❌ No hay fila para clonar');
+            return;
+        }
+        
+        const nuevaFila = primeraFila.cloneNode(true);
+        
+        // Reemplazar índices en el HTML
+        const htmlAnterior = nuevaFila.innerHTML;
+        const nuevoHtml = htmlAnterior.replace(/-(0|__prefix__)-/g, `-${totalForms}-`)
+                                      .replace(/_(0|__prefix__)_/g, `_${totalForms}_`);
+        nuevaFila.innerHTML = nuevoHtml;
+        
+        // Limpiar valores
+        nuevaFila.querySelectorAll('input, select').forEach(input => {
+            if (input.type === 'checkbox') {
+                if (input.name.includes('-DELETE')) {
+                    input.checked = false;
+                }
+            } else if (input.type === 'hidden' && input.name.includes('-id')) {
+                input.value = '';
+            } else if (input.classList.contains('subtotal-display')) {
+                input.value = '0.00';
+            } else if (input.tagName === 'SELECT') {
+                input.selectedIndex = 0;
+            } else if (!input.readOnly) {
+                input.value = input.defaultValue || '';
+            }
+        });
+        
+        // Mostrar y adjuntar
+        nuevaFila.style.display = 'table-row';
+        nuevaFila.setAttribute('data-form-index', totalForms);
+        tableBody.appendChild(nuevaFila);
+        
+        adjuntarEventos(nuevaFila);
+        
+        totalForms++;
+        totalFormsInput.value = totalForms;
+        
+        console.log(`✅ Nueva fila añadida. Total: ${totalForms}`);
+    });
+    
+    console.log('✅ Script completado');
+});
+</script>
+
+{% endblock %}

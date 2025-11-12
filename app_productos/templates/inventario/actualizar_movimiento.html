@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Actualizar Movimiento de Inventario #{{ movimiento.id }}</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label class="form-label">Producto</label>
+    <select name="producto" class="form-control" required>
+        {% for producto in productos %}
+            <option value="{{ producto.id }}" {% if movimiento.producto.id == producto.id %}selected{% endif %}>
+                {{ producto.nombre }} (Stock: {{ producto.stock }})
+            </option>
+        {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Tipo de Movimiento</label>
+    <select name="tipo_movimiento" class="form-control" required>
+        {% for code, label in tipos_movimiento %}
+            <option value="{{ code }}" {% if movimiento.tipo_movimiento == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Cantidad</label>
+    <input name="cantidad" type="number" min="1" class="form-control" value="{{ movimiento.cantidad }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Razón / Descripción</label>
+    <textarea name="razon" class="form-control" required>{{ movimiento.razon }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Responsable (Opcional)</label>
+    <input name="responsable" class="form-control" value="{{ movimiento.responsable|default:'' }}">
+  </div>
+  
+  <button class="btn btn-primary">Guardar Cambios</button>
+  <a class="btn btn-secondary" href="{% url 'ver_movimientos_inventario' %}">Cancelar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Actualizar Venta #{{ venta.id }}</h3>
+<p>Fecha de Venta: **{{ venta.fecha_venta|date:"Y-m-d H:i" }}** | Monto Total: **${{ venta.monto_total }}**</p>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="row">
+        <div class="col-md-4">
+             <h4>1. Información General</h4>
+            <div class="mb-3">
+                <label class="form-label">Fecha de Venta</label>
+                <input type="text" name="fecha_venta_display" class="form-control" value="{{ venta.fecha_venta|date:"Y-m-d H:i" }}" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Nombre del Cliente (Opcional)</label>
+                <input name="nombre_cliente" class="form-control" value="{{ venta.nombre_cliente|default:'' }}">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Vendedor (Opcional)</label>
+                <input name="vendedor" class="form-control" value="{{ venta.vendedor|default:'' }}">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Método de Pago</label>
+                <select name="metodo_pago" class="form-control" required>
+                    {% for code, label in metodos_pago %}
+                        <option value="{{ code }}" {% if venta.metodo_pago == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="esta_pagada" name="esta_pagada" {% if venta.esta_pagada %}checked{% endif %}>
+                <label class="form-check-label" for="esta_pagada">Venta Pagada</label>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h4>2. Detalles de Venta</h4>
+            
+            <table class="table table-striped table-bordered" id="detalle-venta-table">
+                <thead>
+                    <tr>
+                        <th>Producto (*)</th>
+                        <th>Cantidad (*)</th>
+                        <th>Precio Unitario</th>
+                        <th>Desc. (%)</th>
+                        <th>Subtotal</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody id="formset-container">
+                    {{ formset.management_form }}
+                    
+                    {% for form in formset %}
+                        <tr class="formset-row" 
+                            {% if forloop.last and not form.instance.pk %}id="empty-form" style="display: none;"{% endif %}
+                            {% if form.instance.pk and form.DELETE.value %}style="display: none;"{% endif %}>
+                            
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            <td>{{ form.producto }}</td>
+                            <td>{{ form.cantidad_vendida }}</td>
+                            <td>{{ form.precio_unitario }}</td>
+                            <td>{{ form.descuento_porcentaje }}</td>
+                            <td>
+                                <input type="text" class="form-control subtotal-display" value="{% if form.instance.pk %}{{ form.instance.subtotal }}{% else %}0.00{% endif %}" readonly>
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">X</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <button type="button" class="btn btn-sm btn-info" id="add-form-row">Añadir Producto</button>
+            <p class="mt-2 text-danger">{% for error in formset.non_form_errors %}{{ error }}{% endfor %}</p>
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">Guardar Cambios</button>
+    <a href="{% url 'ver_ventas' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableBody = document.getElementById('formset-container');
+        const addButton = document.getElementById('add-form-row');
+        const totalFormsInput = document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS');
+        let totalForms = parseInt(totalFormsInput.value);
+        
+        // 🚨 CAMBIO: Ahora usamos el ID 'empty-form'
+        const emptyFormRow = document.getElementById('empty-form'); 
+
+        // ⚠️ Importante: Parseamos los datos de productos
+        const productsData = JSON.parse('{{ productos|safe }}'.replace(/&quot;/g, '"')); 
+
+        // --- 1. FUNCIÓN DE AUTO-PRECIO ---
+
+        function getProductPrice(productId) {
+            const product = productsData.find(p => String(p.id) === String(productId));
+            return product ? String(product.precio_venta) : '0.00';
+        }
+
+        function updatePrice(event) {
+            const selectElement = event.target;
+            const selectedProductId = selectElement.value;
+            const row = selectElement.closest('.formset-row'); 
+            const priceInput = row.querySelector('.precio-unitario-input');
+            
+            if (priceInput) {
+                const price = getProductPrice(selectedProductId);
+                priceInput.value = price;
+            }
+        }
+
+        // Asignar el listener de cambio a los selects de producto existentes
+        tableBody.querySelectorAll('.producto-select').forEach(select => {
+            select.addEventListener('change', updatePrice);
+        });
+        
+        // Cargar precios iniciales para filas existentes (al editar)
+        tableBody.querySelectorAll('.formset-row:not(#empty-form)').forEach(row => {
+            const selectElement = row.querySelector('.producto-select');
+            if (selectElement && selectElement.value) {
+                updatePrice({target: selectElement}); 
+            }
+        });
+
+
+        // --- 2. GESTIÓN DEL FORMSET (AÑADIR) ---
+
+        // 🚨 CORRECCIÓN CLAVE: Función para re-indexar y limpiar los campos
+        function cleanAndReindex(elem, index) {
+            // Reemplazamos '__prefix__' en *todo* el contenido HTML (lo más seguro)
+            elem.innerHTML = elem.innerHTML.replace(/__prefix__/g, index);
+            
+            // Recorremos los inputs para LIMPIAR VALORES específicos
+            elem.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes(index)) {
+                     if (input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'number')) {
+                        input.value = '';
+                    } else if (input.tagName === 'SELECT') {
+                        input.value = ''; // Limpiamos la selección
+                    } 
+                    
+                    // Aseguramos que el campo DELETE esté desmarcado
+                    if (name.includes('-DELETE')) {
+                        input.checked = false;
+                    }
+                    // Aseguramos que el campo PK esté vacío (para crear un nuevo detalle)
+                    if (name.includes('-id')) {
+                        input.value = '';
+                    }
+                }
+            });
+            
+            // Asegurar que la fila es visible
+            elem.style.display = 'table-row';
+            elem.removeAttribute('id'); // Quitamos el ID 'empty-form' del clon
+        }
+
+
+        // Lógica del botón Añadir Producto
+        addButton.addEventListener('click', function() {
+            if (!emptyFormRow) return;
+
+            const newFormRow = emptyFormRow.cloneNode(true);
+
+            // Re-indexamos el nuevo clon
+            cleanAndReindex(newFormRow, totalForms);
+
+            // Adjuntar la nueva fila 
+            tableBody.appendChild(newFormRow);
+            
+            // Re-adjuntar listeners al NUEVO select y botón
+            newFormRow.querySelector('.producto-select')?.addEventListener('change', updatePrice);
+            newFormRow.querySelector('.remove-form-row')?.addEventListener('click', deleteFormRow);
+            
+            // Incrementar el contador TOTAL_FORMS
+            totalForms += 1;
+            totalFormsInput.value = totalForms;
+        });
+
+        // --- 3. GESTIÓN DEL FORMSET (ELIMINAR) ---
+        
+        function deleteFormRow(event) {
+            event.preventDefault();
+            const row = event.target.closest('.formset-row');
+            
+            // Marcar el checkbox DELETE y ocultar la fila
+            const deleteInput = row.querySelector('input[name$="-DELETE"]');
+
+            if (deleteInput) {
+                deleteInput.checked = true;
+                row.style.display = 'none'; 
+            }
+        }
+
+        // Asignar el listener de eliminación a las filas existentes
+        tableBody.querySelectorAll('.remove-form-row').forEach(button => {
+            button.addEventListener('click', deleteFormRow);
+        });
+
+    });
+</script>
+{% endblock %}

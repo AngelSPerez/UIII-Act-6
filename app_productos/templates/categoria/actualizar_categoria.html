@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Actualizar Categoría</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label class="form-label">Nombre</label>
+    <input name="nombre" class="form-control" value="{{ categoria.nombre }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Descripción</label>
+    <textarea name="descripcion" class="form-control" rows="3">{{ categoria.descripcion|default:"" }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Pasillo</label>
+    <input name="pasillo" type="number" class="form-control" value="{{ categoria.pasillo|default:"" }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Responsable de Área</label>
+    <input name="responsable_area" class="form-control" value="{{ categoria.responsable_area|default:"" }}">
+  </div>
+
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="activa" value="on" id="id_activa" {% if categoria.activa %}checked{% endif %}>
+    <label class="form-check-label" for="id_activa">
+        Activa
+    </label>
+  </div>
+
+  <button class="btn btn-primary">Actualizar</button>
+  <a class="btn btn-secondary" href="{% url 'ver_categorias' %}">Cancelar</a>
+</form>
+{% endblock %}

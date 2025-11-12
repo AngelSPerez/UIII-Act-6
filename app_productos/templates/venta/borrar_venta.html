@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Borrar Venta</h3>
+<div class="alert alert-warning" role="alert">
+    <strong>¡Advertencia!</strong> Al borrar esta venta, también se eliminarán todos sus detalles de producto asociados.
+</div>
+<p>¿Desea borrar la venta con ID <strong>#{{ venta.id }}</strong>, realizada a **{{ venta.nombre_cliente|default:"Cliente General" }}** por un monto de **${{ venta.monto_total }}**?</p>
+<form method="post">
+  {% csrf_token %}
+  <button class="btn btn-danger">Sí, borrar</button>
+  <a class="btn btn-secondary" href="{% url 'ver_ventas' %}">Cancelar</a>
+</form>
+{% endblock %}
