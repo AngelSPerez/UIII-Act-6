@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Actualizar Venta #{{ venta.id }}</h3>
+<p>Fecha de Venta: **{{ venta.fecha_venta|date:"Y-m-d H:i" }}** | Monto Total: **${{ venta.monto_total }}**</p>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="row">
+        <div class="col-md-4">
+             <h4>1. Información General</h4>
+            <div class="mb-3">
+                <label class="form-label">Fecha de Venta</label>
+                <input type="text" name="fecha_venta_display" class="form-control" value="{{ venta.fecha_venta|date:"Y-m-d H:i" }}" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Cliente (*)</label>
+                <select name="cliente_id" id="cliente-select" class="form-control" required>
+                    <option value="">Seleccione un cliente...</option>
+                    
+                    <option value="anonimo" {% if not venta.cliente and venta.nombre_cliente == 'Anónimo' %}selected{% endif %}>Anónimo</option>
+                    <option value="otro" {% if not venta.cliente and venta.nombre_cliente and venta.nombre_cliente != 'Anónimo' %}selected{% endif %}>Otro (Especifique)</option>
+                    
+                    <option value="" disabled>--- Clientes Registrados ---</option>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if venta.cliente and venta.cliente.id == cliente.id %}selected{% endif %}>
+                            {{ cliente.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3" id="cliente-otro-input-container" {% if not venta.cliente and venta.nombre_cliente and venta.nombre_cliente != 'Anónimo' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+                <label class="form-label">Nombre del Cliente (Otro)</label>
+                <input name="cliente_otro_nombre" id="cliente-otro-input" class="form-control" value="{% if not venta.cliente and venta.nombre_cliente != 'Anónimo' %}{{ venta.nombre_cliente|default:'' }}{% endif %}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Vendedor (Opcional)</label>
+                <select name="empleado_id" class="form-control">
+                    <option value="">Seleccione un vendedor...</option>
+                    {% for empleado in empleados %}
+                        <option value="{{ empleado.id }}" {% if venta.empleado_vendedor and venta.empleado_vendedor.id == empleado.id %}selected{% endif %}>
+                            {{ empleado.nombre_completo }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Método de Pago</label>
+                <select name="metodo_pago" class="form-control" required>
+                    {% for code, label in metodos_pago %}
+                        <option value="{{ code }}" {% if venta.metodo_pago == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="esta_pagada" name="esta_pagada" {% if venta.esta_pagada %}checked{% endif %}>
+                <label class="form-check-label" for="esta_pagada">Venta Pagada</label>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h4>2. Detalles de Venta</h4>
+            
+            <table class="table table-striped table-bordered" id="detalle-venta-table">
+                <thead>
+                    <tr>
+                        <th>Producto (*)</th>
+                        <th>Cantidad (*)</th>
+                        <th>Precio Unitario</th>
+                        <th>Desc. (%)</th>
+                        <th>Subtotal</th>
+                        <th>Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody id="formset-container">
+                    {{ formset.management_form }}
+                    
+                    {% for form in formset %}
+                        <tr class="formset-row" 
+                            {% if forloop.last and not form.instance.pk %}id="empty-form" style="display: none;"{% endif %}
+                            {% if form.instance.pk and form.DELETE.value %}style="display: none;"{% endif %}>
+                            
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            
+                            <td>
+                                {{ form.producto }}
+                                {% if form.producto.errors %}<small class="text-danger">{{ form.producto.errors.0 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {{ form.cantidad_vendida }}
+                                {% if form.cantidad_vendida.errors %}<small class="text-danger">{{ form.cantidad_vendida.errors.0 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {{ form.precio_unitario }}
+                                {% if form.precio_unitario.errors %}<small class="text-danger">{{ form.precio_unitario.errors.0 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {{ form.descuento_porcentaje }}
+                                {% if form.descuento_porcentaje.errors %}<small class="text-danger">{{ form.descuento_porcentaje.errors.0 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                <input type="text" class="form-control subtotal-display" value="{% if form.instance.pk %}{{ form.instance.subtotal|default:'0.00' }}{% else %}0.00{% endif %}" readonly>
+                            </td>
+                            <td>
+                                {{ form.DELETE }}
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-form-row">X</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <button type="button" class="btn btn-sm btn-info" id="add-form-row">Añadir Producto</button>
+            <p class="mt-2 text-danger">{% for error in formset.non_form_errors %}{{ error }}{% endfor %}</p>
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">Guardar Cambios</button>
+    <a href="{% url 'ver_ventas' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Datos de productos (asegúrate que 'productos' se pase desde la vista)
+const PRODUCTOS_DATA = {{ productos|safe }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Script de Actualizar Venta iniciado');
+
+    // ============================================
+    // Lógica para Cliente Anónimo/Otro
+    // ============================================
+    const clienteSelect = document.getElementById('cliente-select');
+    const clienteOtroContainer = document.getElementById('cliente-otro-input-container');
+    const clienteOtroInput = document.getElementById('cliente-otro-input');
+
+    if (clienteSelect && clienteOtroContainer && clienteOtroInput) {
+        clienteSelect.addEventListener('change', function() {
+            if (this.value === 'otro') {
+                clienteOtroContainer.style.display = 'block';
+                clienteOtroInput.setAttribute('required', 'required');
+            } else {
+                clienteOtroContainer.style.display = 'none';
+                clienteOtroInput.removeAttribute('required');
+                // No limpiamos el valor aquí, por si el usuario solo está revisando
+            }
+        });
+        console.log('🔗 Evento "change" de Cliente adjuntado');
+    } else {
+         console.warn('⚠️ Faltan elementos de Cliente (select, container, o input)');
+    }
+
+    // ============================================
+    // Lógica del Formset (Añadir/Eliminar/Calcular)
+    // ============================================
+    
+    const tableBody = document.getElementById('formset-container');
+    const addButton = document.getElementById('add-form-row');
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    const emptyFormRow = document.getElementById('empty-form'); // La fila plantilla oculta
+
+    if (!tableBody || !addButton || !totalFormsInput || !emptyFormRow) {
+        console.error('❌ Faltan elementos del Formset (tableBody, addButton, totalFormsInput o emptyFormRow)');
+        return;
+    }
+
+    let totalForms = parseInt(totalFormsInput.value);
+    console.log('📊 Total forms inicial:', totalForms);
+    
+    // --- 1. FUNCIÓN: Obtener precio ---
+    function getProductPrice(productId) {
+        if (!productId) return '0.00';
+        const product = PRODUCTOS_DATA.find(p => String(p.id) === String(productId));
+        return product ? String(product.precio_venta) : '0.00';
+    }
+
+    // --- 2. FUNCIÓN: Calcular subtotal ---
+    function calcularSubtotal(row) {
+        const cantidadInput = row.querySelector('input[name$="-cantidad_vendida"]');
+        const precioInput = row.querySelector('input[name$="-precio_unitario"]');
+        const descuentoInput = row.querySelector('input[name$="-descuento_porcentaje"]');
+        const subtotalDisplay = row.querySelector('.subtotal-display');
+        
+        if (!cantidadInput || !precioInput || !descuentoInput || !subtotalDisplay) return;
+        
+        const cantidad = parseFloat(cantidadInput.value) || 0;
+        const precio = parseFloat(precioInput.value) || 0;
+        const descuento = parseFloat(descuentoInput.value) || 0;
+        
+        const base = cantidad * precio;
+        const subtotal = base * (1 - descuento / 100);
+        
+        subtotalDisplay.value = subtotal.toFixed(2);
+    }
+    
+    // --- 3. FUNCIÓN: Evento de cambio de producto ---
+    function onProductoChange(event) {
+        const select = event.target;
+        const productoId = select.value;
+        const row = select.closest('.formset-row');
+        const precioInput = row.querySelector('input[name$="-precio_unitario"]');
+        
+        if (!precioInput) return;
+        
+        const precio = getProductPrice(productoId);
+        precioInput.value = precio;
+        calcularSubtotal(row);
+    }
+
+    // --- 4. FUNCIÓN: Evento de eliminar fila ---
+    function deleteFormRow(event) {
+        event.preventDefault();
+        const row = event.target.closest('.formset-row');
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+
+        if (deleteInput) {
+            deleteInput.checked = true;
+            row.style.display = 'none'; 
+            console.log('🗑️ Fila marcada para eliminar (existente)');
+        } else {
+            row.remove();
+            console.log('🗑️ Fila nueva eliminada del DOM');
+        }
+    }
+
+    // --- 5. FUNCIÓN: Adjuntar eventos a una fila ---
+    function adjuntarEventos(row) {
+        // Select de producto
+        const productoSelect = row.querySelector('select[name$="-producto"]');
+        if (productoSelect) {
+            productoSelect.removeEventListener('change', onProductoChange);
+            productoSelect.addEventListener('change', onProductoChange);
+        }
+        
+        // Inputs para calcular subtotal
+        const inputsCalculo = row.querySelectorAll('input[name$="-cantidad_vendida"], input[name$="-descuento_porcentaje"], input[name$="-precio_unitario"]');
+        inputsCalculo.forEach(input => {
+             input.addEventListener('input', () => calcularSubtotal(row));
+        });
+        
+        // Botón eliminar
+        const removeBtn = row.querySelector('.remove-form-row');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', deleteFormRow);
+        }
+    }
+
+    // --- 6. ADJUNTAR EVENTOS A FILAS EXISTENTES (AL CARGAR) ---
+    tableBody.querySelectorAll('.formset-row').forEach(row => {
+        // No adjuntar a la plantilla vacía
+        if (row.id !== 'empty-form') {
+            adjuntarEventos(row);
+            // Calcular subtotal inicial al cargar
+            calcularSubtotal(row);
+        }
+    });
+
+    // --- 7. LÓGICA DEL BOTÓN AÑADIR (CORREGIDO) ---
+    addButton.addEventListener('click', function() {
+        console.log('➕ Añadiendo nueva fila...');
+        
+        // 1. Clonar la plantilla
+        const newFormRow = emptyFormRow.cloneNode(true);
+        newFormRow.id = ''; // Quitar el ID 'empty-form'
+        
+        // 2. Reemplazar prefijos
+        const regex = /__prefix__/g;
+        newFormRow.innerHTML = newFormRow.innerHTML.replace(regex, totalForms);
+        
+        // 3. Limpiar valores (por si acaso)
+        newFormRow.querySelectorAll('input, select').forEach(input => {
+            if (input.type === 'checkbox') {
+                input.checked = false;
+            } else if (input.classList.contains('subtotal-display')) {
+                input.value = '0.00';
+            } else if (input.tagName === 'SELECT') {
+                input.selectedIndex = 0;
+            } else if (input.type !== 'hidden') {
+                input.value = '';
+            }
+            // Valores por defecto para cantidad y descuento
+            if (input.name.includes('cantidad_vendida')) input.value = '1';
+            if (input.name.includes('descuento_porcentaje')) input.value = '0';
+        });
+
+        // 4. Mostrar y adjuntar
+        newFormRow.style.display = 'table-row';
+        tableBody.appendChild(newFormRow);
+        
+        // 5. Adjuntar eventos a la *nueva* fila
+        adjuntarEventos(newFormRow);
+        
+        // 6. Incrementar contadores
+        totalForms++;
+        totalFormsInput.value = totalForms;
+        
+        console.log(`✅ Nueva fila añadida. Total: ${totalForms}`);
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Borrar Empleado</h3>
+
+<div class="alert alert-warning" role="alert">
+    <strong>⚠️ ¡Advertencia!</strong> Esta acción no se puede deshacer.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">{{ empleado.nombre_completo }}</h5>
+        <p class="card-text">
+            <strong>Puesto:</strong> {{ empleado.get_puesto_display }}<br>
+            <strong>Teléfono:</strong> {{ empleado.telefono|default:"No registrado" }}<br>
+            <strong>Email:</strong> {{ empleado.email|default:"No registrado" }}<br>
+            <strong>Fecha de contratación:</strong> {{ empleado.fecha_contratacion|date:"d/m/Y" }}<br>
+            {% if empleado.salario %}
+                <strong>Salario:</strong> ${{ empleado.salario }}<br>
+            {% endif %}
+            <strong>Estado:</strong> 
+            {% if empleado.activo %}
+                <span class="badge bg-success">Activo</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactivo</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<p class="mt-3">¿Está seguro de que desea borrar este empleado?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger">🗑️ Sí, borrar empleado</button>
+    <a class="btn btn-secondary" href="{% url 'ver_empleados' %}">Cancelar</a>
+</form>
+{% endblock %}

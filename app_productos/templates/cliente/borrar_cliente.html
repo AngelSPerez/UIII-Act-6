@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Borrar Cliente</h3>
+
+<div class="alert alert-warning" role="alert">
+    <strong>⚠️ ¡Advertencia!</strong> Esta acción no se puede deshacer.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">{{ cliente.nombre_completo }}</h5>
+        <p class="card-text">
+            <strong>Teléfono:</strong> {{ cliente.telefono|default:"No registrado" }}<br>
+            <strong>Email:</strong> {{ cliente.email|default:"No registrado" }}<br>
+            <strong>Dirección:</strong> {{ cliente.direccion|default:"No registrada" }}<br>
+            <strong>Fecha de registro:</strong> {{ cliente.fecha_registro|date:"d/m/Y" }}<br>
+            <strong>Estado:</strong> 
+            {% if cliente.activo %}
+                <span class="badge bg-success">Activo</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactivo</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<p class="mt-3">¿Está seguro de que desea borrar este cliente?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger">🗑️ Sí, borrar cliente</button>
+    <a class="btn btn-secondary" href="{% url 'ver_clientes' %}">Cancelar</a>
+</form>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Borrar Movimiento de Inventario</h3>
+<div class="alert alert-danger" role="alert">
+    <strong>¡Peligro!</strong> Borrar un movimiento de inventario puede desajustar el stock actual de tus productos si no se registra un ajuste correcto.
+</div>
+<p>¿Desea borrar el movimiento de **{{ movimiento.get_tipo_movimiento_display }}** de **{{ movimiento.cantidad }}** unidades del producto **{{ movimiento.producto.nombre }}** (ID #{{ movimiento.id }})?</p>
+<form method="post">
+  {% csrf_token %}
+  <button class="btn btn-danger">Sí, borrar</button>
+  <a class="btn btn-secondary" href="{% url 'ver_movimientos_inventario' %}">Cancelar</a>
+</form>
+{% endblock %}

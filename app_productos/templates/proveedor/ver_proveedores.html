@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+  <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por empresa, contacto o email...">
+</div>
+
+<h3>Ver Proveedores</h3>
+<table class="table table-striped" id="dataTable">
+  <thead>
+    <tr>
+      <th>Empresa</th>
+      <th>Contacto</th>
+      <th>Tel. Contacto</th>
+      <th>Tel. Empresa</th>
+      <th>Email</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in proveedores %}
+    <tr>
+      <td>{{ p.nombre_empresa }}</td>
+      <td>{{ p.nombre_contacto|default:"-" }}</td>
+      <td>{{ p.telefono|default:"-" }}</td>
+      <td>{{ p.telefono_empresa|default:"-" }}</td>
+      <td>{{ p.email|default:"-" }}</td>
+      <td>
+        <a class="btn btn-sm btn-secondary" href="{% url 'actualizar_proveedor' p.id %}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="{% url 'borrar_proveedor' p.id %}">Borrar</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No hay proveedores.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('dataTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent.toLowerCase();
+        
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

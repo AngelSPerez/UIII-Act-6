@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+  <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por nombre o responsable...">
+</div>
+
+<h3>Ver Categorías</h3>
+
+<table class="table table-striped" id="dataTable">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Descripción</th>
+      <th>Pasillo</th>
+      <th>Responsable</th>
+      <th>Activa</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for cat in categorias %}
+    <tr>
+      <td>{{ cat.nombre }}</td>
+      <td>{{ cat.descripcion|default:"-" }}</td>
+      <td>{{ cat.pasillo|default:"N/A" }}</td>
+      <td>{{ cat.responsable_area|default:"-" }}</td>
+      <td>{% if cat.activa %}Sí{% else %}No{% endif %}</td>
+      <td>
+        <a class="btn btn-sm btn-secondary" href="{% url 'actualizar_categoria' cat.id %}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="{% url 'borrar_categoria' cat.id %}">Borrar</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6">No hay categorías registradas.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('dataTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent.toLowerCase();
+        
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Actualizar Empleado #{{ empleado.id }}</h3>
+<p class="text-muted">Fecha de contratación: {{ empleado.fecha_contratacion|date:"Y-m-d" }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Nombre Completo (*)</label>
+                <input type="text" name="nombre_completo" class="form-control" value="{{ empleado.nombre_completo }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Puesto (*)</label>
+                <select name="puesto" class="form-control" required>
+                    {% for code, label in puestos %}
+                        <option value="{{ code }}" {% if empleado.puesto == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Fecha de Contratación (*)</label>
+                <input type="date" name="fecha_contratacion" class="form-control" value="{{ empleado.fecha_contratacion|date:'Y-m-d' }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="text" name="telefono" class="form-control" value="{{ empleado.telefono|default:'' }}" placeholder="Ej: 636-123-4567">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" value="{{ empleado.email|default:'' }}" placeholder="empleado@ejemplo.com">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Salario</label>
+                <input type="number" name="salario" class="form-control" step="0.01" min="0" value="{{ empleado.salario|default:'' }}" placeholder="0.00">
+                <div class="form-text">Salario mensual (opcional)</div>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="activo" name="activo" {% if empleado.activo %}checked{% endif %}>
+                <label class="form-check-label" for="activo">Empleado Activo</label>
+            </div>
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">💾 Guardar Cambios</button>
+    <a href="{% url 'ver_empleados' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

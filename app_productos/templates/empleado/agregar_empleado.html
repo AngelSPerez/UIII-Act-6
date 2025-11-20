@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Agregar Nuevo Empleado</h3>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Nombre Completo (*)</label>
+                <input type="text" name="nombre_completo" class="form-control" required>
+                <div class="form-text">Nombre completo del empleado</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Puesto (*)</label>
+                <select name="puesto" class="form-control" required>
+                    <option value="">Seleccione un puesto...</option>
+                    {% for code, label in puestos %}
+                        <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Fecha de Contratación (*)</label>
+                <input type="date" name="fecha_contratacion" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="text" name="telefono" class="form-control" placeholder="Ej: 636-123-4567">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" placeholder="empleado@ejemplo.com">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Salario</label>
+                <input type="number" name="salario" class="form-control" step="0.01" min="0" placeholder="0.00">
+                <div class="form-text">Salario mensual (opcional)</div>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="activo" name="activo" checked>
+                <label class="form-check-label" for="activo">Empleado Activo</label>
+            </div>
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">💾 Guardar Empleado</button>
+    <a href="{% url 'ver_empleados' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

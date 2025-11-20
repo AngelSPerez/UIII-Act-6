@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+  <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por nombre, puesto o teléfono...">
+</div>
+
+<h3>Ver Empleados</h3>
+
+<table class="table table-striped" id="dataTable">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nombre Completo</th>
+      <th>Puesto</th>
+      <th>Teléfono</th>
+      <th>Email</th>
+      <th>Fecha Contratación</th>
+      <th>Estado</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for empleado in empleados %}
+    <tr>
+      <td>{{ empleado.id }}</td>
+      <td>{{ empleado.nombre_completo }}</td>
+      <td>
+        <span class="badge bg-primary">{{ empleado.get_puesto_display }}</span>
+      </td>
+      <td>{{ empleado.telefono|default:"-" }}</td>
+      <td>{{ empleado.email|default:"-" }}</td>
+      <td>{{ empleado.fecha_contratacion|date:"Y-m-d" }}</td>
+      <td>
+        {% if empleado.activo %}
+          <span class="badge bg-success">Activo</span>
+        {% else %}
+          <span class="badge bg-secondary">Inactivo</span>
+        {% endif %}
+      </td>
+      <td>
+        <a class="btn btn-sm btn-info" href="{% url 'actualizar_empleado' empleado.id %}">Editar</a>
+        <a class="btn btn-sm btn-danger" href="{% url 'borrar_empleado' empleado.id %}">Borrar</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">No hay empleados registrados.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('dataTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const text = row.textContent.toLowerCase();
+        
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %}

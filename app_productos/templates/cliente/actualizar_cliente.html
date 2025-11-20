@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h3>Actualizar Cliente #{{ cliente.id }}</h3>
+<p class="text-muted">Fecha de registro: {{ cliente.fecha_registro|date:"Y-m-d" }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Nombre Completo (*)</label>
+                <input type="text" name="nombre_completo" class="form-control" value="{{ cliente.nombre_completo }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="text" name="telefono" class="form-control" value="{{ cliente.telefono|default:'' }}" placeholder="Ej: 636-123-4567">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" value="{{ cliente.email|default:'' }}" placeholder="cliente@ejemplo.com">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <textarea name="direccion" class="form-control" rows="3">{{ cliente.direccion|default:'' }}</textarea>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="activo" name="activo" {% if cliente.activo %}checked{% endif %}>
+                <label class="form-check-label" for="activo">Cliente Activo</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Notas</label>
+                <textarea name="notas" class="form-control" rows="3">{{ cliente.notas|default:'' }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <hr>
+    <button class="btn btn-primary" type="submit">💾 Guardar Cambios</button>
+    <a href="{% url 'ver_clientes' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}
